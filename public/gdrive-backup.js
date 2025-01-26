@@ -210,33 +210,53 @@ script.onload = () => {
         // Initialization and Scheduling
         const initialize = async () => {
             try {
-                updateStatus('Initializing backup system...');
+                updateStatus('Starting initialization...');
                 
                 // Load the Google API client and auth2 library
-                await new Promise((resolve) => {
-                    gapi.load('client:auth2', resolve);
-                });
+                updateStatus('Loading Google API...');
+                try {
+                    await new Promise((resolve, reject) => {
+                        gapi.load('client:auth2', {
+                            callback: resolve,
+                            onerror: reject
+                        });
+                    });
+                    updateStatus('Google API loaded successfully');
+                } catch (loadError) {
+                    throw new Error(`Failed to load Google API: ${loadError.message}`);
+                }
 
                 // Initialize the API
+                updateStatus('Initializing Google Drive API...');
                 const initialized = await initGoogleDriveAPI();
                 if (!initialized) {
                     throw new Error('Failed to initialize Google Drive API');
                 }
+                updateStatus('Google Drive API initialized');
 
                 // Handle authentication
+                updateStatus('Checking authentication...');
                 const auth = gapi.auth2.getAuthInstance();
                 if (!auth.isSignedIn.get()) {
                     updateStatus('Please authorize Google Drive access...');
-                    await auth.signIn();
+                    try {
+                        await auth.signIn();
+                        updateStatus('Authorization successful');
+                    } catch (authError) {
+                        throw new Error(`Authorization failed: ${authError.message}`);
+                    }
                 }
 
                 // Get or create the backup folder
+                updateStatus('Accessing backup folder...');
                 const folder = await createOrGetFolder();
                 if (!folder) {
-                    throw new Error('Failed to create/get backup folder');
+                    throw new Error('Failed to access backup folder');
                 }
+                updateStatus('Backup folder ready');
 
                 // Set up automatic backup schedule
+                updateStatus('Setting up backup schedule...');
                 setInterval(async () => {
                     const now = new Date();
                     if (!lastBackupTime || (now - lastBackupTime) >= CONFIG.BACKUP_FREQUENCY) {
@@ -245,12 +265,14 @@ script.onload = () => {
                 }, 60 * 60 * 1000); // Check every hour
 
                 // Create initial backup
+                updateStatus('Creating initial backup...');
                 await createBackup();
 
                 updateStatus('Backup system initialized successfully');
             } catch (error) {
-                updateStatus('Failed to initialize backup system', 'error');
+                updateStatus(`Initialization failed: ${error.message}`, 'error');
                 log(error, 'error');
+                console.error('Full error details:', error);
             }
         };
 
