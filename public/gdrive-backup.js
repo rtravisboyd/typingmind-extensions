@@ -55,25 +55,38 @@ script.onload = () => {
                 
                 // Load only the client first
                 updateStatus('Loading client library...');
-                await gapi.client.init({
-                    apiKey: 'AIzaSyBy0N2UWH2hZiFQUFeSS_6JE-9Tj8IJnIw',
-                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
-                });
+                try {
+                    await gapi.client.init({
+                        apiKey: 'AIzaSyBy0N2UWH2hZiFQUFeSS_6JE-9Tj8IJnIw',
+                        clientId: '753342971428-ock50rvg2d0rf6h4e67lb2ssvkvqpq2n.apps.googleusercontent.com',
+                        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                        scope: 'https://www.googleapis.com/auth/drive.file'
+                    });
+                } catch (initError) {
+                    updateStatus(`Client init error: ${initError.message || 'Unknown error'}`, 'error');
+                    console.error('Client init error details:', initError);
+                    throw initError;
+                }
+                
+                // Verify the client is loaded
+                if (!gapi.client) {
+                    updateStatus('Client not loaded properly', 'error');
+                    throw new Error('Client not loaded');
+                }
                 updateStatus('Client library loaded');
 
-                // Then initialize auth separately
-                updateStatus('Loading auth library...');
-                await gapi.client.init({
-                    clientId: '753342971428-ock50rvg2d0rf6h4e67lb2ssvkvqpq2n.apps.googleusercontent.com',
-                    scope: 'https://www.googleapis.com/auth/drive.file'
-                });
-                updateStatus('Auth library loaded');
+                // Verify Drive API is loaded
+                if (!gapi.client.drive) {
+                    updateStatus('Drive API not loaded properly', 'error');
+                    throw new Error('Drive API not loaded');
+                }
+                updateStatus('Drive API loaded');
                 
                 isInitialized = true;
                 log('Google Drive API initialized successfully');
                 return true;
             } catch (error) {
-                updateStatus(`Google Drive API initialization error: ${error.message}`, 'error');
+                updateStatus(`Google Drive API initialization error: ${error.message || 'Unknown error'}`, 'error');
                 console.error('Full Google Drive API error:', error);
                 log(error, 'error');
                 return false;
