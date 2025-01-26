@@ -1,5 +1,8 @@
 // TypingMind Google Drive Backup Extension
 (() => {
+    console.log('EXTENSION LOADED');
+    alert('Extension loaded - testing if it runs at all');
+
     const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
     const CLIENT_ID = '753342971428-ock50rvg2d0rf6h4e67lb2ssvkvqpq2n.apps.googleusercontent.com';
     let accessToken = null;
