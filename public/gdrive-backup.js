@@ -1,4 +1,3 @@
-
 // Load Google API Client Library
 const script = document.createElement('script');
 script.src = 'https://apis.google.com/js/api.js';
@@ -68,7 +67,6 @@ script.onload = () => {
                 return false;
             }
         };
-
         const createOrGetFolder = async () => {
             try {
                 // Search for existing folder
