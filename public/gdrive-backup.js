@@ -51,18 +51,30 @@ script.onload = () => {
         // Google Drive Operations
         const initGoogleDriveAPI = async () => {
             try {
+                updateStatus('Starting Google Drive API initialization...');
+                
+                // Load only the client first
+                updateStatus('Loading client library...');
                 await gapi.client.init({
                     apiKey: 'AIzaSyBy0N2UWH2hZiFQUFeSS_6JE-9Tj8IJnIw',
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+                });
+                updateStatus('Client library loaded');
+
+                // Then initialize auth separately
+                updateStatus('Loading auth library...');
+                await gapi.client.init({
                     clientId: '753342971428-ock50rvg2d0rf6h4e67lb2ssvkvqpq2n.apps.googleusercontent.com',
-                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                     scope: 'https://www.googleapis.com/auth/drive.file'
                 });
+                updateStatus('Auth library loaded');
                 
                 isInitialized = true;
-                log('Google Drive API initialized');
+                log('Google Drive API initialized successfully');
                 return true;
             } catch (error) {
-                updateStatus('Failed to initialize Google Drive API', 'error');
+                updateStatus(`Google Drive API initialization error: ${error.message}`, 'error');
+                console.error('Full Google Drive API error:', error);
                 log(error, 'error');
                 return false;
             }
