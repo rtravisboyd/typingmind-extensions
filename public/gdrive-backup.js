@@ -212,13 +212,22 @@ script.onload = () => {
             try {
                 updateStatus('Initializing backup system...');
                 
-                // Load the Google API client
-                await new Promise((resolve) => gapi.load('client:auth2', resolve));
-                
+                // Load the Google API client and auth2 library
+                await new Promise((resolve) => {
+                    gapi.load('client:auth2', resolve);
+                });
+
                 // Initialize the API
                 const initialized = await initGoogleDriveAPI();
                 if (!initialized) {
                     throw new Error('Failed to initialize Google Drive API');
+                }
+
+                // Handle authentication
+                const auth = gapi.auth2.getAuthInstance();
+                if (!auth.isSignedIn.get()) {
+                    updateStatus('Please authorize Google Drive access...');
+                    await auth.signIn();
                 }
 
                 // Get or create the backup folder
