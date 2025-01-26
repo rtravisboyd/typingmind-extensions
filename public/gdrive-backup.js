@@ -1,7 +1,6 @@
 // TypingMind Google Drive Backup Extension
 (() => {
     console.log('EXTENSION LOADED');
-    alert('Extension loaded - testing if it runs at all');
 
     const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
     const CLIENT_ID = '753342971428-ock50rvg2d0rf6h4e67lb2ssvkvqpq2n.apps.googleusercontent.com';
@@ -121,11 +120,20 @@
 
     // Add backup button to sidebar
     function addBackupButton() {
-        const sidebar = document.querySelector('.sidebar-menu');
-        if (!sidebar || document.getElementById('gdrive-backup-btn')) return;
+        // Target the Settings container we can see in the screenshot
+        const settingsContainer = document.querySelector('[data-testid="settings-icon"]') || 
+                                document.querySelector('.Settings') ||
+                                document.querySelector('div[class*="Settings"]');
+        
+        if (!settingsContainer || document.getElementById('gdrive-backup-btn')) return;
+
+        const parentContainer = settingsContainer.parentElement;
+        if (!parentContainer) return;
 
         const button = document.createElement('div');
         button.id = 'gdrive-backup-btn';
+        // Copy the settings icon's class to match styling
+        button.className = settingsContainer.className;
         button.style.cssText = `
             display: flex;
             flex-direction: column;
@@ -150,17 +158,13 @@
         button.onmouseout = () => button.style.opacity = '0.7';
         button.onclick = createBackup;
 
-        const settingsButton = sidebar.querySelector('[class*="Settings"]');
-        if (settingsButton) {
-            sidebar.insertBefore(button, settingsButton);
-        } else {
-            sidebar.appendChild(button);
-        }
+        parentContainer.insertBefore(button, settingsContainer);
     }
 
     // Initialize
     function initialize() {
         addBackupButton();
+        // Try to add button every second in case the sidebar loads dynamically
         setInterval(addBackupButton, 1000);
     }
 
