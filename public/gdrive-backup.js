@@ -118,55 +118,45 @@
         }
     }
 
-    // Add backup button to sidebar
-    function addBackupButton() {
-        // Target the Settings container we can see in the screenshot
-        const settingsContainer = document.querySelector('[data-testid="settings-icon"]') || 
-                                document.querySelector('.Settings') ||
-                                document.querySelector('div[class*="Settings"]');
-        
-        if (!settingsContainer || document.getElementById('gdrive-backup-btn')) return;
-
-        const parentContainer = settingsContainer.parentElement;
-        if (!parentContainer) return;
+    // Create a fixed floating button
+    function addFixedButton() {
+        if (document.getElementById('gdrive-backup-btn')) return;
 
         const button = document.createElement('div');
         button.id = 'gdrive-backup-btn';
-        // Copy the settings icon's class to match styling
-        button.className = settingsContainer.className;
         button.style.cssText = `
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 10px;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4285f4;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
             cursor: pointer;
-            opacity: 0.7;
-            transition: opacity 0.2s;
-            margin: 4px 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: system-ui, -apple-system, sans-serif;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         `;
         
         button.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="17 8 12 3 7 8"/>
                 <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            <span style="font-size: 12px; margin-top: 4px;">Backup</span>
+            Backup to Drive
         `;
 
-        button.onmouseover = () => button.style.opacity = '1';
-        button.onmouseout = () => button.style.opacity = '0.7';
+        button.onmouseover = () => button.style.backgroundColor = '#3367d6';
+        button.onmouseout = () => button.style.backgroundColor = '#4285f4';
         button.onclick = createBackup;
 
-        parentContainer.insertBefore(button, settingsContainer);
+        document.body.appendChild(button);
     }
 
     // Initialize
-    function initialize() {
-        addBackupButton();
-        // Try to add button every second in case the sidebar loads dynamically
-        setInterval(addBackupButton, 1000);
-    }
-
-    initialize();
+    addFixedButton();
 })();
