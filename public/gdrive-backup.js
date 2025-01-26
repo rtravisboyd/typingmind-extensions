@@ -1,24 +1,31 @@
 // TypingMind Google Drive Backup Extension
 (() => {
+    // First, inject Google API client library
+    const script = document.createElement('script');
+    script.src = 'https://apis.google.com/js/api.js';
+    script.onload = () => {
+        // Load auth2 library
+        window.gapi.load('client:auth2', initializeExtension);
+    };
+    document.head.appendChild(script);
+
     const CONFIG = {
         FOLDER_NAME: 'TypingMind Backup & Cloud Sync',
-        BACKUP_FREQUENCY: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
-        KEEP_BACKUPS: 7, // Number of backups to keep
-        DEBUG: true // Set to false in production
+        BACKUP_FREQUENCY: 24 * 60 * 60 * 1000,
+        KEEP_BACKUPS: 7,
+        DEBUG: true
     };
 
     let folderId = null;
     let isInitialized = false;
     let lastBackupTime = null;
 
-    // Utility functions
     const log = (message, type = 'info') => {
         if (CONFIG.DEBUG) {
             console[type](`[TypingMind Backup] ${message}`);
         }
     };
 
-    // UI Elements
     const createStatusElement = () => {
         const statusDiv = document.createElement('div');
         statusDiv.id = 'tm-backup-status';
@@ -44,59 +51,26 @@
         log(message, type);
     };
 
-    // OAuth Configuration
-    const OAUTH_CONFIG = {
-        apiKey: 'AIzaSyBy0N2UWH2hZiFQUFeSS_6JE-9Tj8IJnIw',
-        clientId: '753342971428-ock50rvg2d0rf6h4e67lb2ssvkvqpq2n.apps.googleusercontent.com',
-        scope: 'https://www.googleapis.com/auth/drive.file',
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
-    };
-
-    // Load Google API
-    const loadGoogleAPI = () => {
-        return new Promise((resolve, reject) => {
-            window.gapi.load('client:auth2', {
-                callback: resolve,
-                onerror: reject,
-                timeout: 5000,
-                ontimeout: reject
+    async function initializeExtension() {
+        try {
+            await window.gapi.client.init({
+                apiKey: 'AIzaSyBy0N2UWH2hZiFQUFeSS_6JE-9Tj8IJnIw',
+                clientId: '753342971428-ock50rvg2d0rf6h4e67lb2ssvkvqpq2n.apps.googleusercontent.com',
+                scope: 'https://www.googleapis.com/auth/drive.file',
+                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
             });
-        });
-    };
 
-    // Initialize Google API
-    const initializeGoogleAPI = async () => {
-        try {
-            updateStatus('Initializing Google API...');
-            await window.gapi.client.init(OAUTH_CONFIG);
-            updateStatus('Google API initialized');
-            return true;
-        } catch (error) {
-            updateStatus(`Failed to initialize Google API: ${error.message}`, 'error');
-            return false;
-        }
-    };
-
-    // Handle Authentication
-    const authenticateWithGoogle = async () => {
-        try {
-            updateStatus('Checking authentication...');
             const authInstance = window.gapi.auth2.getAuthInstance();
-            
             if (!authInstance.isSignedIn.get()) {
-                updateStatus('Please sign in to Google Drive...');
                 await authInstance.signIn();
             }
-            
-            updateStatus('Successfully authenticated');
-            return true;
+
+            await initializeDrive();
         } catch (error) {
-            updateStatus(`Authentication failed: ${error.message}`, 'error');
-            return false;
+            updateStatus(`Initialization failed: ${error.message}`, 'error');
         }
-    };
-    // Drive Operations
-    const createOrGetFolder = async () => {
+    }
+    async function initializeDrive() {
         try {
             const response = await window.gapi.client.drive.files.list({
                 q: `name='${CONFIG.FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
@@ -105,68 +79,101 @@
 
             if (response.result.files.length > 0) {
                 folderId = response.result.files[0].id;
-                log(`Found existing folder: ${folderId}`);
             } else {
-                const folderMetadata = {
-                    name: CONFIG.FOLDER_NAME,
-                    mimeType: 'application/vnd.google-apps.folder'
-                };
-
-                const folder = await window.gapi.client.drive.files.create({
-                    resource: folderMetadata,
+                const folderResponse = await window.gapi.client.drive.files.create({
+                    resource: {
+                        name: CONFIG.FOLDER_NAME,
+                        mimeType: 'application/vnd.google-apps.folder'
+                    },
                     fields: 'id'
                 });
-
-                folderId = folder.result.id;
-                log(`Created new folder: ${folderId}`);
+                folderId = folderResponse.result.id;
             }
-            return folderId;
-        } catch (error) {
-            updateStatus(`Folder operation failed: ${error.message}`, 'error');
-            return null;
-        }
-    };
 
-    const createBackup = async () => {
-        if (!folderId) {
-            updateStatus('Backup folder not initialized', 'error');
-            return false;
+            isInitialized = true;
+            updateStatus('Ready to backup');
+            createBackupButton();
+        } catch (error) {
+            updateStatus(`Drive initialization failed: ${error.message}`, 'error');
+        }
+    }
+
+    function createBackupButton() {
+        const sidebar = document.querySelector('.sidebar-menu');
+        if (!sidebar || document.getElementById('gdrive-backup-btn')) return;
+
+        const button = document.createElement('div');
+        button.id = 'gdrive-backup-btn';
+        button.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            margin: 4px 0;
+        `;
+        button.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span style="font-size: 12px; margin-top: 4px;">Backup</span>
+        `;
+
+        button.onmouseover = () => button.style.opacity = '1';
+        button.onmouseout = () => button.style.opacity = '0.7';
+        button.onclick = createBackup;
+
+        const settingsButton = sidebar.querySelector('[class*="Settings"]');
+        if (settingsButton) {
+            sidebar.insertBefore(button, settingsButton);
+        } else {
+            sidebar.appendChild(button);
+        }
+    }
+
+    async function createBackup() {
+        if (!isInitialized || !folderId) {
+            updateStatus('System not initialized', 'error');
+            return;
         }
 
         try {
             updateStatus('Creating backup...');
-            const chats = window.typingMind.getChats();
+            const chats = Object.entries(localStorage)
+                .filter(([key]) => key.startsWith('chat:'))
+                .map(([_, value]) => JSON.parse(value));
+
             const backupData = JSON.stringify({
                 timestamp: new Date().toISOString(),
                 chats: chats,
                 version: '1.0'
             });
 
-            const fileMetadata = {
-                name: `TypingMind_Backup_${new Date().toISOString()}.json`,
-                parents: [folderId]
-            };
-
             const file = await window.gapi.client.drive.files.create({
-                resource: fileMetadata,
+                resource: {
+                    name: `TypingMind_Backup_${new Date().toISOString().replace(/:/g, '-')}.json`,
+                    parents: [folderId]
+                },
                 media: {
                     mimeType: 'application/json',
                     body: backupData
                 },
-                fields: 'id, name, createdTime'
+                fields: 'id, name'
             });
 
             lastBackupTime = new Date();
             updateStatus(`Backup completed: ${file.result.name}`);
             await cleanupOldBackups();
-            return true;
         } catch (error) {
             updateStatus(`Backup failed: ${error.message}`, 'error');
-            return false;
         }
-    };
+    }
 
-    const cleanupOldBackups = async () => {
+    async function cleanupOldBackups() {
         try {
             const response = await window.gapi.client.drive.files.list({
                 q: `'${folderId}' in parents and mimeType='application/json'`,
@@ -180,65 +187,10 @@
                     await window.gapi.client.drive.files.delete({
                         fileId: files[i].id
                     });
-                    log(`Deleted old backup: ${files[i].name}`);
                 }
             }
         } catch (error) {
             log(`Cleanup failed: ${error.message}`, 'error');
         }
-    };
-
-    // Main initialization
-    const initialize = async () => {
-        try {
-            updateStatus('Starting initialization...');
-            
-            // Wait for Google API to be available
-            if (!window.gapi) {
-                throw new Error('Google API not loaded');
-            }
-
-            // Load and initialize Google API
-            await loadGoogleAPI();
-            const initialized = await initializeGoogleAPI();
-            if (!initialized) {
-                throw new Error('Failed to initialize Google API');
-            }
-
-            // Authenticate
-            const authenticated = await authenticateWithGoogle();
-            if (!authenticated) {
-                throw new Error('Authentication failed');
-            }
-
-            // Set up Drive
-            const folder = await createOrGetFolder();
-            if (!folder) {
-                throw new Error('Failed to access backup folder');
-            }
-
-            // Schedule backups
-            setInterval(async () => {
-                const now = new Date();
-                if (!lastBackupTime || (now - lastBackupTime) >= CONFIG.BACKUP_FREQUENCY) {
-                    await createBackup();
-                }
-            }, 60 * 60 * 1000); // Check every hour
-
-            // Initial backup
-            await createBackup();
-            isInitialized = true;
-            updateStatus('Backup system initialized successfully');
-        } catch (error) {
-            updateStatus(`Initialization failed: ${error.message}`, 'error');
-            console.error('Full error details:', error);
-        }
-    };
-
-    // Start the extension when Google API is ready
-    if (window.gapi) {
-        initialize();
-    } else {
-        updateStatus('Waiting for Google API...', 'error');
     }
 })();
