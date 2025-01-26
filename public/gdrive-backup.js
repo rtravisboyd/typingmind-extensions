@@ -1,3 +1,4 @@
+
 // Load Google API Client Library
 const script = document.createElement('script');
 script.src = 'https://apis.google.com/js/api.js';
@@ -199,8 +200,7 @@ script.onload = () => {
                 // Restore to TypingMind
                 window.typingMind.restoreChats(backupData.chats);
                 
-                updateStatus(`Restored from backup: ${mostRecent.name}`
-                });
+                updateStatus(`Restored from backup: ${mostRecent.name}`);
                 return true;
             } catch (error) {
                 updateStatus('Restore failed', 'error');
