@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "uuid": "render-backup-plugin",
+  "title": "Render Backup",
+  "emoji": "💾",
+  "implementationType": "javascript",
+  "description": "Backup and restore your chats using Render server",
+  "id": "render-backup",
+  "outputType": "render_html",
+  "implementation": "implementation.js"
+}
